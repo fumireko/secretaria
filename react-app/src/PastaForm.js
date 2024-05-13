@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 const PastaForm = () => {
@@ -19,21 +19,21 @@ const PastaForm = () => {
     status: ''
   });
 
+  const handleKeyPress = useCallback((event) => {
+    if (event.key === 'a' && !document.activeElement.tagName.startsWith('INPUT')) {
+      setAddToggle(true);
+    }
+  });
+  
   useEffect(() => {
     fetchGavetas();
     fetchPastas();
-    const handleKeyPress = (event) => {
-      if (event.key === 'a' && !document.activeElement.tagName.startsWith('INPUT')) {
-        setAddToggle(true);
-      }
-    };
-
     document.addEventListener('keypress', handleKeyPress);
-
+  
     return () => {
       document.removeEventListener('keypress', handleKeyPress);
     };
-  }, []);
+  }, [handleKeyPress]);
 
   useEffect(() => {
     if (addToggle) {
@@ -48,16 +48,16 @@ const PastaForm = () => {
     }
   }, [addToggle, pastas]);
   
-  const fetchGavetas = async () => {
+  const fetchGavetas = useCallback(async () => {
     try {
       const response = await axios.get('/api/gaveta/');
       setGavetas(response.data);
     } catch (error) {
       console.error('Error fetching gavetas:', error);
     }
-  };
+  });
 
-  const fetchPastas = async () => {
+  const fetchPastas = useCallback(async () => {
     try {
       const response = await axios.get('/api/pasta/');
       if (response.data.length > 0) {
@@ -68,7 +68,7 @@ const PastaForm = () => {
     } catch (error) {
       console.error('Error fetching pastas:', error);
     }
-  };
+  });
 
   const handleAddPasta = async () => {
     try {
@@ -129,6 +129,8 @@ const PastaForm = () => {
       }
     }
   };
+
+  const memo = useMemo(() => pastas, [pastas]);
 
   return (
     <div className='py-3'>
@@ -213,7 +215,7 @@ const PastaForm = () => {
             </tr>
           )}
 
-          {pastas.map((pasta, index) => (
+          {memo.map((pasta, index) => (
             <tr key={pasta.id}>
                 <td>
                   {editIndex === index ? (
@@ -239,7 +241,7 @@ const PastaForm = () => {
                       required
                     />
                   ) : (
-                    pasta.nomeAluno.toUpperCase()
+                    pasta.nomeAluno?.toUpperCase()
                   )}
                 </td>
                 <td>
@@ -307,4 +309,4 @@ const PastaForm = () => {
   );
 };
 
-export default PastaForm;
+export default React.memo(PastaForm);
