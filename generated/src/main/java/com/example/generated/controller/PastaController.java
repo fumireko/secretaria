@@ -35,7 +35,13 @@ public class PastaController {
       Collections.sort(pastas, Comparator.comparingLong(Pasta::getId));
       return ResponseEntity.ok(pastas);
   }
-
+  
+  @GetMapping("/last")
+  public ResponseEntity<Pasta> getLastPasta() {
+      List<Pasta> pastas = pastaRepo.findAll();
+      return ResponseEntity.ok(pastas.get(pastas.size() - 1));
+  }
+  
   @PostMapping("/")
   public ResponseEntity<?> createPasta(@RequestBody Pasta body) {
     try {

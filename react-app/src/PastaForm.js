@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const PastaForm = () => {
@@ -23,31 +23,8 @@ const PastaForm = () => {
     if (event.key === 'a' && !document.activeElement.tagName.startsWith('INPUT')) {
       setAddToggle(true);
     }
-  });
-  
-  useEffect(() => {
-    fetchGavetas();
-    fetchPastas();
-    document.addEventListener('keypress', handleKeyPress);
-  
-    return () => {
-      document.removeEventListener('keypress', handleKeyPress);
-    };
-  }, [handleKeyPress]);
+  }, []);
 
-  useEffect(() => {
-    if (addToggle) {
-      const lastPasta = pastas[pastas.length - 1];
-      const newNumeroPasta = lastPasta ? lastPasta.numeroPasta + 1 : 1;
-      setNewPasta({
-        numeroPasta: newNumeroPasta,
-        nomeAluno: '',
-        gavetaId: lastPasta ? lastPasta.gaveta.id : '',
-        status: lastPasta ? lastPasta.status : ''
-      });
-    }
-  }, [addToggle, pastas]);
-  
   const fetchGavetas = useCallback(async () => {
     try {
       const response = await axios.get('/api/gaveta/');
@@ -55,25 +32,54 @@ const PastaForm = () => {
     } catch (error) {
       console.error('Error fetching gavetas:', error);
     }
-  });
+  }, []);
 
   const fetchPastas = useCallback(async () => {
     try {
       const response = await axios.get('/api/pasta/');
-      if (response.data.length > 0) {
-        setPastas(response.data);
-      } else {
-        setPastas([]);
-      }
+      setPastas(response.data.length > 0 ? response.data : []);
     } catch (error) {
       console.error('Error fetching pastas:', error);
     }
-  });
+  }, []);
+
+  const fetchLastPasta = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/pasta/last');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching last pasta:', error);
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGavetas();
+    fetchPastas();
+    document.addEventListener('keypress', handleKeyPress);
+
+    return () => {
+      document.removeEventListener('keypress', handleKeyPress);
+    };
+  }, [fetchGavetas, fetchPastas, handleKeyPress]);
+
+  useEffect(() => {
+    if (addToggle) {
+      fetchLastPasta().then((lastPasta) => {
+        const newNumeroPasta = lastPasta ? lastPasta.numeroPasta + 1 : 1;
+        setNewPasta({
+          numeroPasta: newNumeroPasta,
+          nomeAluno: '',
+          gavetaId: lastPasta ? lastPasta.gaveta.id : '',
+          status: lastPasta ? lastPasta.status : ''
+        });
+      });
+    }
+  }, [addToggle, fetchLastPasta]);
 
   const handleAddPasta = async () => {
     try {
       const newPastaData = { ...newPasta };
-      const lastPasta = pastas[pastas.length - 1];
       const selectedGaveta = gavetas.find(gaveta => gaveta.id === +newPastaData.gavetaId);
       newPastaData.gaveta = { id: selectedGaveta.id, descricao: selectedGaveta.descricao };
       await axios.post('/api/pasta/', newPastaData);
@@ -129,8 +135,6 @@ const PastaForm = () => {
       }
     }
   };
-
-  const memo = useMemo(() => pastas, [pastas]);
 
   return (
     <div className='py-3'>
@@ -215,7 +219,7 @@ const PastaForm = () => {
             </tr>
           )}
 
-          {memo.map((pasta, index) => (
+          {pastas.map((pasta, index) => (
             <tr key={pasta.id}>
                 <td>
                   {editIndex === index ? (
